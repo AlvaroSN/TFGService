@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32002.261
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TFGService", "TFGService\TFGService.csproj", "{B96786E0-90F4-400E-84D1-8CEF9866B6FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WCFclient", "WCFclient\WCFclient.csproj", "{A1C74F31-7A78-4D62-850F-F2131769599D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B96786E0-90F4-400E-84D1-8CEF9866B6FC} = {B96786E0-90F4-400E-84D1-8CEF9866B6FC}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B96786E0-90F4-400E-84D1-8CEF9866B6FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B96786E0-90F4-400E-84D1-8CEF9866B6FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B96786E0-90F4-400E-84D1-8CEF9866B6FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B96786E0-90F4-400E-84D1-8CEF9866B6FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1C74F31-7A78-4D62-850F-F2131769599D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1C74F31-7A78-4D62-850F-F2131769599D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1C74F31-7A78-4D62-850F-F2131769599D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1C74F31-7A78-4D62-850F-F2131769599D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {095C117D-8813-4746-A8C1-EE9D6262FAB0}
+	EndGlobalSection
+EndGlobal
