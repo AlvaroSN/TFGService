@@ -14,9 +14,9 @@ namespace WCFclient
         {
 
             Console.WriteLine("Comienzo de servicio");
-            Access access1 = new Access() { IP = "0.0.0.1", ID = "1", Service = "Servicio1", Button = true };
-            Access access2 = new Access() { IP = "0.0.0.8", ID = "2", Service = "Servicio1", Button = true };
-            Access access3 = new Access() { IP = "0.0.0.15", ID = "1", Service = "Servicio2", Button = false };
+            Access access1 = new Access() { IP = "0.0.0.1", ID = "1", Service = "Servicio1", Type = "button" };
+            Access access2 = new Access() { IP = "0.0.0.8", ID = "2", Service = "Servicio1", Type = "url" };
+            Access access3 = new Access() { IP = "0.0.0.15", ID = "1", Service = "Servicio2", Type = "lista" };
             byte result;
 
             using (ServiceReference1.Service1Client client = new ServiceReference1.Service1Client())

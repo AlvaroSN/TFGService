@@ -26,6 +26,12 @@ namespace WCFclient.ServiceReference1 {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/Result", ReplyAction="http://tempuri.org/IService1/ResultResponse")]
         System.Threading.Tasks.Task<string> ResultAsync(byte x);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/prueba", ReplyAction="http://tempuri.org/IService1/pruebaResponse")]
+        string prueba(TFGService.Access access);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/prueba", ReplyAction="http://tempuri.org/IService1/pruebaResponse")]
+        System.Threading.Tasks.Task<string> pruebaAsync(TFGService.Access access);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -69,6 +75,14 @@ namespace WCFclient.ServiceReference1 {
         
         public System.Threading.Tasks.Task<string> ResultAsync(byte x) {
             return base.Channel.ResultAsync(x);
+        }
+        
+        public string prueba(TFGService.Access access) {
+            return base.Channel.prueba(access);
+        }
+        
+        public System.Threading.Tasks.Task<string> pruebaAsync(TFGService.Access access) {
+            return base.Channel.pruebaAsync(access);
         }
     }
 }

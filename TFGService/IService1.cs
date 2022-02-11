@@ -18,7 +18,8 @@ namespace TFGService
 
         [OperationContract]
         string Result(byte x);
-        
+
+
     }
 
     // Utilice un contrato de datos, como se ilustra en el ejemplo siguiente, para agregar tipos compuestos a las operaciones de servicio.
@@ -27,7 +28,7 @@ namespace TFGService
     public class Access
     {
         [DataMember]
-        public bool Button { get; set; }
+        public string Type { get; set; }
         [DataMember]
         public string Service { get; set; }
         [DataMember]

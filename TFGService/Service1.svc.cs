@@ -6,6 +6,7 @@ using System.ServiceModel;
 using System.ServiceModel.Web;
 using System.Text;
 using System.IO;
+using System.Collections.Concurrent;
 
 namespace TFGService
 {
@@ -15,9 +16,9 @@ namespace TFGService
     public class Service1 : IService1
     {
         private static System.Timers.Timer timer;
+        private static ConcurrentDictionary<string, InfoHash> ipHash = new ConcurrentDictionary<string, InfoHash>();
         public static HashSet<String> whiteList = new HashSet<String>();
         public static HashSet<String> blackList = new HashSet<String>();
-        public static HashSet<String> ipHash = new HashSet<String>();
         public static String registerFile = "C:\\inetpub\\ServicioIPControlWCF\\registro.txt";
 
         public static readonly int maAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccess"]);
@@ -72,11 +73,12 @@ namespace TFGService
             }
         }
 
-        public void controlList(string ip)
+        public void controlList(Access access)
         {
-            if (!ipHash.Contains(ip))
+            string ip = access.IP;
+            if (!ipHash.ContainsKey(ip))
             {
-                ipHash.Add(ip);
+                ipHash.TryAdd(ip, new InfoHash("Servicio"));
                 StreamWriter register = new StreamWriter(registerFile, true, System.Text.Encoding.Default);
                 register.WriteLine(ip);
                 register.Close();
@@ -86,8 +88,10 @@ namespace TFGService
 
         public byte TryAccess(Access access)
         {
+            controlList(access);
             string ip = access.IP;
-            controlList(ip);
+            InfoHash info = ipHash.GetOrAdd(ip, new InfoHash("Por defecto"));
+            info.AddAccess(access.Type);
 
             if (blackList.Contains(ip))
             {
