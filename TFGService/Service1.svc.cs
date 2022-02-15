@@ -21,7 +21,7 @@ namespace TFGService
         public static HashSet<String> blackList = new HashSet<String>();
         public static String registerFile = "C:\\inetpub\\ServicioIPControlWCF\\registro.txt";
 
-        public static readonly int maAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccess"]);
+        public static readonly int maxAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccess"]);
 
         public Service1()
         {
@@ -73,9 +73,8 @@ namespace TFGService
             }
         }
 
-        public void controlList(Access access)
+        public void controlList(String ip, InfoHash info)
         {
-            string ip = access.IP;
             if (!ipHash.ContainsKey(ip))
             {
                 ipHash.TryAdd(ip, new InfoHash("Servicio"));
@@ -83,27 +82,48 @@ namespace TFGService
                 register.WriteLine(ip);
                 register.Close();
             }
+
+            if (blackList.Contains(ip))
+            {
+                info.DenyAccess();
+                return;
+            }
+
+            if(whiteList.Contains(ip))
+            {
+                info.AllowAccess();
+                return;
+            }
         }
 
 
         public byte TryAccess(Access access)
         {
-            controlList(access);
             string ip = access.IP;
             InfoHash info = ipHash.GetOrAdd(ip, new InfoHash("Por defecto"));
+            controlList(ip, info);
             info.AddAccess(access.Type);
 
-            if (blackList.Contains(ip))
+            if (info.AccessAllowed())
             {
                 return 0;
 
-            } else if(whiteList.Contains(ip))
+            } else if(info.AccessDenied())
             {
                 return 1;
 
-            } else
+            } else if (info.VPN())
             {
                 return 2;
+            } else
+            {
+                if (info.NumAccess() > maxAccess)
+                {
+                    return 3;
+                } else
+                {
+                    return 4;
+                }
             }
         }
 
@@ -112,11 +132,15 @@ namespace TFGService
             switch (x)
             {
                 case 0:
-                    return string.Format("El usuario está en la lista negra");
+                    return "El usuario pudo acceder (lista blanca)";
                 case 1:
-                    return string.Format("El usuario está en la lista blanca");
+                    return "El usuario no pudo acceder (lista negra)";
+                case 2:
+                    return "El usuario no pudo acceder(VPN)";
+                case 4:
+                    return "El usuario superó el número de accesos permitidos";
                 default:
-                    return string.Format("El usuario no está en ninguna lista");
+                    return string.Format("El usuario pudo acceder");
 
             }
         }

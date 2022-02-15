@@ -27,7 +27,9 @@ namespace WCFclient
                 Console.WriteLine(access2.IP + ": "+ client.Result(result));
                 result = client.TryAccess(access3);
                 Console.WriteLine(access3.IP + ": " + client.Result(result));
-                result = client.TryAccess(access1);
+                result = client.TryAccess(access3);
+                Console.WriteLine(access1.IP + ": " + client.Result(result));
+                result = client.TryAccess(access3);
                 Console.WriteLine(access1.IP + ": " + client.Result(result));
 
                 Console.WriteLine("\nPulsa <Enter> para terminar el cliente.");
