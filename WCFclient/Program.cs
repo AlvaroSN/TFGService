@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TFGService;
 using WCFclient.ServiceReference1;
@@ -25,8 +26,10 @@ namespace WCFclient
                 Console.WriteLine(access1.IP + ": " + client.Result(result));
                 result = client.TryAccess(access2);
                 Console.WriteLine(access2.IP + ": "+ client.Result(result));
+                Thread.Sleep(1000);
                 result = client.TryAccess(access3);
                 Console.WriteLine(access3.IP + ": " + client.Result(result));
+                Thread.Sleep(1000);
                 result = client.TryAccess(access3);
                 Console.WriteLine(access1.IP + ": " + client.Result(result));
                 result = client.TryAccess(access3);

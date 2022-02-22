@@ -7,7 +7,7 @@ namespace TFGService
 {
     public class InfoHash
     {
-        private string service;
+        private string target;
         private string sesionID;
         private int numAccess;
         private int numAccessURL;
@@ -22,7 +22,7 @@ namespace TFGService
             numAccess = 0;
             numAccessButton = 0;
             numAccessURL = 0;
-            service = action;
+            target = action;
             accessAllowed = false;
             accessDenied = false;
             vpn = false;
@@ -68,7 +68,7 @@ namespace TFGService
 
         public string Service()
         {
-            return service;
+            return target;
         }
 
         public int NumAccess()

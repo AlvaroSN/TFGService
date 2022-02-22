@@ -19,6 +19,9 @@ namespace TFGService
         [OperationContract]
         string Result(byte x);
 
+        [OperationContract]
+        void UpdateInfoHash(Access access, String ip, InfoHash info);
+
 
     }
 

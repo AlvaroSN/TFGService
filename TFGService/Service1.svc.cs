@@ -7,6 +7,8 @@ using System.ServiceModel.Web;
 using System.Text;
 using System.IO;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using System.Timers;
 
 namespace TFGService
 {
@@ -15,21 +17,37 @@ namespace TFGService
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     public class Service1 : IService1
     {
-        private static System.Timers.Timer timer;
+        //Timer para controlar la escritura de las listas
+        private static Timer timer;
+        //Variable para controlar el timer
+        public static readonly long timeElapsed = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeElapsed"]);
+        public static readonly int maxAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccess"]);
+        public static readonly int maxAccessTime = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccessTime"]);
+
         private static ConcurrentDictionary<string, InfoHash> ipHash = new ConcurrentDictionary<string, InfoHash>();
         public static HashSet<String> whiteList = new HashSet<String>();
         public static HashSet<String> blackList = new HashSet<String>();
+        public static HashSet<String> vpnList = new HashSet<String>();
         public static String registerFile = "C:\\inetpub\\ServicioIPControlWCF\\registro.txt";
-
-        public static readonly int maxAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccess"]);
 
         public Service1()
         {
-            setBlacklist("C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt");
-            setWhitelist("C:\\inetpub\\ServicioIPControlWCF\\listablanca.txt");
+            if (timer == null)
+            {
+                timer = new System.Timers.Timer(timeElapsed);
+                timer.Interval = 2000;
+                timer.Elapsed += ReadBlacklist;
+                timer.Elapsed += ReadWhitelist;
+                timer.AutoReset = true;
+                timer.Enabled = true;
+                ReadBlacklist("C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt");
+                ReadWhitelist("C:\\inetpub\\ServicioIPControlWCF\\listablanca.txt");
+                ReadVPN("C:\\inetpub\\ServicioIPControlWCF\\vpn.txt");
+            }
+            
         }
 
-        public void setBlacklist(string url)
+        private static void ReadBlacklist(string url)
         {
             StreamReader blacklistFile = null;
             try
@@ -38,7 +56,7 @@ namespace TFGService
                 string line;
                 while ((line = blacklistFile.ReadLine()) != null)
                 {
-                    lock(blackList) blackList.Add(line);
+                    blackList.Add(line);
                 }
             }
 
@@ -51,7 +69,7 @@ namespace TFGService
             }
         }
 
-        public void setWhitelist(string url)
+        public void ReadWhitelist(string url)
         {
             StreamReader whitelistFile = null;
             try
@@ -60,7 +78,7 @@ namespace TFGService
                 string line;
                 while ((line = whitelistFile.ReadLine()) != null)
                 {
-                    lock (whiteList) whiteList.Add(line);
+                    whiteList.Add(line);
                 }
             }
 
@@ -73,14 +91,48 @@ namespace TFGService
             }
         }
 
+        public void ReadVPN(string url)
+        {
+            StreamReader vpnFile = null;
+            try
+            {
+                vpnFile = new StreamReader(url);
+                string line;
+                while ((line = vpnFile.ReadLine()) != null)
+                {
+                    whiteList.Add(line);
+                }
+            }
+
+            catch (Exception)
+            {
+            }
+            finally
+            {
+                if (vpnFile != null) vpnFile.Close();
+            }
+        }
+
         public void controlList(String ip, InfoHash info)
         {
-            if (!ipHash.ContainsKey(ip))
+
+            StreamWriter register = new StreamWriter(registerFile, true, System.Text.Encoding.Default);
+            register.WriteLine(ip);
+            register.Close();
+
+            /*if (!ipHash.ContainsKey(ip))
             {
                 ipHash.TryAdd(ip, new InfoHash("Servicio"));
                 StreamWriter register = new StreamWriter(registerFile, true, System.Text.Encoding.Default);
                 register.WriteLine(ip);
                 register.Close();
+            }*/
+
+            //Prevalece la lista blanca
+            if (whiteList.Contains(ip))
+            {
+                info.AllowAccess();
+                return;
             }
 
             if (blackList.Contains(ip))
@@ -89,42 +141,64 @@ namespace TFGService
                 return;
             }
 
-            if(whiteList.Contains(ip))
+            foreach (string line in vpnList)
             {
-                info.AllowAccess();
-                return;
+                if (ip.StartsWith(line))
+                {
+                    info.IsVPN();
+                    return;
+                }
             }
+
+        }
+
+        public void UpdateInfoHash(Access access, String ip, InfoHash info)
+        {
+            controlList(access.IP, info);
+            info.AddAccess(access.Type);
         }
 
 
         public byte TryAccess(Access access)
         {
-            string ip = access.IP;
-            InfoHash info = ipHash.GetOrAdd(ip, new InfoHash("Por defecto"));
-            controlList(ip, info);
-            info.AddAccess(access.Type);
+            try
+            {
+                InfoHash info = ipHash.GetOrAdd(access.IP, new InfoHash(access.Service));
+                //Si hay algún problema se le da acceso al cliente
+                new Task(() => UpdateInfoHash(access, access.IP, info)).Start();
 
-            if (info.AccessAllowed())
-            {
-                return 0;
-
-            } else if(info.AccessDenied())
-            {
-                return 1;
-
-            } else if (info.VPN())
-            {
-                return 2;
-            } else
-            {
-                if (info.NumAccess() > maxAccess)
+                if (info.AccessAllowed())
                 {
-                    return 3;
-                } else
+                    return 0;
+
+                }
+                else if (info.AccessDenied())
                 {
-                    return 4;
+                    return 1;
+
+                }
+                else if (info.VPN())
+                {
+                    return 2;
+                }
+                else
+                {
+                    if (info.NumAccess() > maxAccess)
+                    {
+                        return 3;
+                    }
+                    else
+                    {
+                        return 4;
+                    }
                 }
             }
+
+            catch (Exception)
+            {
+                return 0;
+            }
+            
         }
 
         public string Result(byte x)
@@ -137,7 +211,7 @@ namespace TFGService
                     return "El usuario no pudo acceder (lista negra)";
                 case 2:
                     return "El usuario no pudo acceder(VPN)";
-                case 4:
+                case 3:
                     return "El usuario superó el número de accesos permitidos";
                 default:
                     return string.Format("El usuario pudo acceder");
