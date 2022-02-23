@@ -13,30 +13,20 @@
   <wsdl:message name="IService1_TryAccess_OutputMessage">
     <wsdl:part name="parameters" element="tns:TryAccessResponse" />
   </wsdl:message>
-  <wsdl:message name="IService1_Result_InputMessage">
-    <wsdl:part name="parameters" element="tns:Result" />
+  <wsdl:message name="IService1_UpdateInfoHash_InputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateInfoHash" />
   </wsdl:message>
-  <wsdl:message name="IService1_Result_OutputMessage">
-    <wsdl:part name="parameters" element="tns:ResultResponse" />
-  </wsdl:message>
-  <wsdl:message name="IService1_prueba_InputMessage">
-    <wsdl:part name="parameters" element="tns:prueba" />
-  </wsdl:message>
-  <wsdl:message name="IService1_prueba_OutputMessage">
-    <wsdl:part name="parameters" element="tns:pruebaResponse" />
+  <wsdl:message name="IService1_UpdateInfoHash_OutputMessage">
+    <wsdl:part name="parameters" element="tns:UpdateInfoHashResponse" />
   </wsdl:message>
   <wsdl:portType name="IService1">
     <wsdl:operation name="TryAccess">
       <wsdl:input wsaw:Action="http://tempuri.org/IService1/TryAccess" message="tns:IService1_TryAccess_InputMessage" />
       <wsdl:output wsaw:Action="http://tempuri.org/IService1/TryAccessResponse" message="tns:IService1_TryAccess_OutputMessage" />
     </wsdl:operation>
-    <wsdl:operation name="Result">
-      <wsdl:input wsaw:Action="http://tempuri.org/IService1/Result" message="tns:IService1_Result_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IService1/ResultResponse" message="tns:IService1_Result_OutputMessage" />
-    </wsdl:operation>
-    <wsdl:operation name="prueba">
-      <wsdl:input wsaw:Action="http://tempuri.org/IService1/prueba" message="tns:IService1_prueba_InputMessage" />
-      <wsdl:output wsaw:Action="http://tempuri.org/IService1/pruebaResponse" message="tns:IService1_prueba_OutputMessage" />
+    <wsdl:operation name="UpdateInfoHash">
+      <wsdl:input wsaw:Action="http://tempuri.org/IService1/UpdateInfoHash" message="tns:IService1_UpdateInfoHash_InputMessage" />
+      <wsdl:output wsaw:Action="http://tempuri.org/IService1/UpdateInfoHashResponse" message="tns:IService1_UpdateInfoHash_OutputMessage" />
     </wsdl:operation>
   </wsdl:portType>
   <wsdl:binding name="BasicHttpBinding_IService1" type="tns:IService1">
@@ -50,17 +40,8 @@
         <soap:body use="literal" />
       </wsdl:output>
     </wsdl:operation>
-    <wsdl:operation name="Result">
-      <soap:operation soapAction="http://tempuri.org/IService1/Result" style="document" />
-      <wsdl:input>
-        <soap:body use="literal" />
-      </wsdl:input>
-      <wsdl:output>
-        <soap:body use="literal" />
-      </wsdl:output>
-    </wsdl:operation>
-    <wsdl:operation name="prueba">
-      <soap:operation soapAction="http://tempuri.org/IService1/prueba" style="document" />
+    <wsdl:operation name="UpdateInfoHash">
+      <soap:operation soapAction="http://tempuri.org/IService1/UpdateInfoHash" style="document" />
       <wsdl:input>
         <soap:body use="literal" />
       </wsdl:input>

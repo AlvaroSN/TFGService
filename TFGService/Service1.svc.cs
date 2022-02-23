@@ -17,100 +17,39 @@ namespace TFGService
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     public class Service1 : IService1
     {
-        //Timer para controlar la escritura de las listas
-        private static Timer timer;
+        
         //Variable para controlar el timer
         public static readonly long timeElapsed = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeElapsed"]);
         public static readonly int maxAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccess"]);
         public static readonly int maxAccessTime = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccessTime"]);
 
         private static ConcurrentDictionary<string, InfoHash> ipHash = new ConcurrentDictionary<string, InfoHash>();
-        public static HashSet<String> whiteList = new HashSet<String>();
-        public static HashSet<String> blackList = new HashSet<String>();
-        public static HashSet<String> vpnList = new HashSet<String>();
+        public static Reader reader;
+        public static HashSet<String> whiteList;
+        public static HashSet<String> blackList;
+        public static HashSet<String> vpnList;
         public static String registerFile = "C:\\inetpub\\ServicioIPControlWCF\\registro.txt";
 
+        //Timer para controlar la escritura de las listas
+        private static System.Timers.Timer timer;
         public Service1()
         {
             if (timer == null)
             {
                 timer = new System.Timers.Timer(timeElapsed);
-                timer.Interval = 2000;
-                timer.Elapsed += ReadBlacklist;
-                timer.Elapsed += ReadWhitelist;
+                timer.Elapsed += SetReader;
                 timer.AutoReset = true;
                 timer.Enabled = true;
-                ReadBlacklist("C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt");
-                ReadWhitelist("C:\\inetpub\\ServicioIPControlWCF\\listablanca.txt");
-                ReadVPN("C:\\inetpub\\ServicioIPControlWCF\\vpn.txt");
-            }
-            
-        }
-
-        private static void ReadBlacklist(string url)
-        {
-            StreamReader blacklistFile = null;
-            try
-            {
-                blacklistFile = new StreamReader(url);
-                string line;
-                while ((line = blacklistFile.ReadLine()) != null)
-                {
-                    blackList.Add(line);
-                }
-            }
-
-            catch (Exception)
-            {
-            }
-            finally
-            {
-                if (blacklistFile != null) blacklistFile.Close();
+                SetReader(null, null);
             }
         }
 
-        public void ReadWhitelist(string url)
+        private static void SetReader(object source, ElapsedEventArgs e)
         {
-            StreamReader whitelistFile = null;
-            try
-            {
-                whitelistFile = new StreamReader(url);
-                string line;
-                while ((line = whitelistFile.ReadLine()) != null)
-                {
-                    whiteList.Add(line);
-                }
-            }
-
-            catch (Exception)
-            {
-            }
-            finally
-            {
-                if (whitelistFile != null) whitelistFile.Close();
-            }
-        }
-
-        public void ReadVPN(string url)
-        {
-            StreamReader vpnFile = null;
-            try
-            {
-                vpnFile = new StreamReader(url);
-                string line;
-                while ((line = vpnFile.ReadLine()) != null)
-                {
-                    whiteList.Add(line);
-                }
-            }
-
-            catch (Exception)
-            {
-            }
-            finally
-            {
-                if (vpnFile != null) vpnFile.Close();
-            }
+            reader = new Reader();
+            whiteList = reader.WhiteList();
+            blackList = reader.Blacklist();
+            vpnList = reader.VPNList();
         }
 
         public void controlList(String ip, InfoHash info)
@@ -198,25 +137,11 @@ namespace TFGService
             {
                 return 0;
             }
-            
-        }
-
-        public string Result(byte x)
-        {
-            switch (x)
+            finally
             {
-                case 0:
-                    return "El usuario pudo acceder (lista blanca)";
-                case 1:
-                    return "El usuario no pudo acceder (lista negra)";
-                case 2:
-                    return "El usuario no pudo acceder(VPN)";
-                case 3:
-                    return "El usuario superó el número de accesos permitidos";
-                default:
-                    return string.Format("El usuario pudo acceder");
-
+                //if (hashIP.ContainsKey(ip)) hashIP[ip].Libre(true); // Se deja libre la IP por si se va a eliminar del HashIP.
             }
+
         }
 
     }

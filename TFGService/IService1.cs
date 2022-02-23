@@ -16,13 +16,6 @@ namespace TFGService
         [OperationContract]
         byte TryAccess(Access value);
 
-        [OperationContract]
-        string Result(byte x);
-
-        [OperationContract]
-        void UpdateInfoHash(Access access, String ip, InfoHash info);
-
-
     }
 
     // Utilice un contrato de datos, como se ilustra en el ejemplo siguiente, para agregar tipos compuestos a las operaciones de servicio.
@@ -31,8 +24,10 @@ namespace TFGService
     public class Access
     {
         [DataMember]
+        //Tipo de acceso: por botón, por lista o por URL
         public string Type { get; set; }
         [DataMember]
+        //Cambiar el nombre
         public string Service { get; set; }
         [DataMember]
         public string ID { get; set; }

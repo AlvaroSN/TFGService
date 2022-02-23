@@ -21,17 +21,11 @@ namespace WCFclient.ServiceReference1 {
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/TryAccess", ReplyAction="http://tempuri.org/IService1/TryAccessResponse")]
         System.Threading.Tasks.Task<byte> TryAccessAsync(TFGService.Access value);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/Result", ReplyAction="http://tempuri.org/IService1/ResultResponse")]
-        string Result(byte x);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/UpdateInfoHash", ReplyAction="http://tempuri.org/IService1/UpdateInfoHashResponse")]
+        void UpdateInfoHash(TFGService.Access access, string ip);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/Result", ReplyAction="http://tempuri.org/IService1/ResultResponse")]
-        System.Threading.Tasks.Task<string> ResultAsync(byte x);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/prueba", ReplyAction="http://tempuri.org/IService1/pruebaResponse")]
-        string prueba(TFGService.Access access);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/prueba", ReplyAction="http://tempuri.org/IService1/pruebaResponse")]
-        System.Threading.Tasks.Task<string> pruebaAsync(TFGService.Access access);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/UpdateInfoHash", ReplyAction="http://tempuri.org/IService1/UpdateInfoHashResponse")]
+        System.Threading.Tasks.Task UpdateInfoHashAsync(TFGService.Access access, string ip);
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -69,20 +63,12 @@ namespace WCFclient.ServiceReference1 {
             return base.Channel.TryAccessAsync(value);
         }
         
-        public string Result(byte x) {
-            return base.Channel.Result(x);
+        public void UpdateInfoHash(TFGService.Access access, string ip) {
+            base.Channel.UpdateInfoHash(access, ip);
         }
         
-        public System.Threading.Tasks.Task<string> ResultAsync(byte x) {
-            return base.Channel.ResultAsync(x);
-        }
-        
-        public string prueba(TFGService.Access access) {
-            return base.Channel.prueba(access);
-        }
-        
-        public System.Threading.Tasks.Task<string> pruebaAsync(TFGService.Access access) {
-            return base.Channel.pruebaAsync(access);
+        public System.Threading.Tasks.Task UpdateInfoHashAsync(TFGService.Access access, string ip) {
+            return base.Channel.UpdateInfoHashAsync(access, ip);
         }
     }
 }
