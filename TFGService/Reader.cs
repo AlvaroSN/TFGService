@@ -9,11 +9,13 @@ namespace TFGService
 {
     public class Reader
     {
+        //Hashes donde se van a almacenar las direcciones de los ficheros
         public static HashSet<String> whiteList = new HashSet<String>();
         public static HashSet<String> blackList = new HashSet<String>();
         public static HashSet<String> vpnList = new HashSet<String>();
         public Reader()
         {
+            //LLamada a las funciones encargadas de leer los archivos e insertar las direcciones en los hashes
             ReadBlacklist("C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt");
             ReadWhitelist("C:\\inetpub\\ServicioIPControlWCF\\listablanca.txt");
             ReadVPN("C:\\inetpub\\ServicioIPControlWCF\\VPN.txt");
@@ -85,6 +87,7 @@ namespace TFGService
             }
         }
 
+        //Getters
         public HashSet<String> Blacklist()
         {
             return blackList;

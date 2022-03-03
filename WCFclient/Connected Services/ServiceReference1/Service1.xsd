@@ -15,17 +15,16 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="UpdateInfoHash">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element xmlns:q2="http://schemas.datacontract.org/2004/07/TFGService" minOccurs="0" name="access" nillable="true" type="q2:Access" />
-        <xs:element minOccurs="0" name="ip" nillable="true" type="xs:string" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="UpdateInfoHashResponse">
+  <xs:element name="InfoTime">
     <xs:complexType>
       <xs:sequence />
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="InfoTimeResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="InfoTimeResult" type="xs:long" />
+      </xs:sequence>
     </xs:complexType>
   </xs:element>
 </xs:schema>

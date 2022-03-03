@@ -20,7 +20,7 @@ namespace WCFclient
             Access access3 = new Access() { IP = "0.0.0.15", ID = "1", Service = "Servicio2", Type = "lista" };
             Access access4 = new Access() { IP = "1.1.0.0", ID = "1", Service = "Servicio2", Type = "lista" };
 
-            UserAccess(access1,2,0,false);
+            UserAccess(access1,4,1000,true);
             UserAccess(access2,2,0,false);
             UserAccess(access3,3,0,false);
             UserAccess(access4,2,0,false);
@@ -58,7 +58,7 @@ namespace WCFclient
             switch (x)
             {
                 case 0:
-                    return "El usuario pudo acceder (lista blanca)";
+                    return "El usuario pudo acceder";
                 case 1:
                     return "El usuario no pudo acceder (lista negra)";
                 case 2:

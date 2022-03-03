@@ -21,11 +21,11 @@ namespace WCFclient.ServiceReference1 {
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/TryAccess", ReplyAction="http://tempuri.org/IService1/TryAccessResponse")]
         System.Threading.Tasks.Task<byte> TryAccessAsync(TFGService.Access value);
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/UpdateInfoHash", ReplyAction="http://tempuri.org/IService1/UpdateInfoHashResponse")]
-        void UpdateInfoHash(TFGService.Access access, string ip);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/InfoTime", ReplyAction="http://tempuri.org/IService1/InfoTimeResponse")]
+        long InfoTime();
         
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/UpdateInfoHash", ReplyAction="http://tempuri.org/IService1/UpdateInfoHashResponse")]
-        System.Threading.Tasks.Task UpdateInfoHashAsync(TFGService.Access access, string ip);
+        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/InfoTime", ReplyAction="http://tempuri.org/IService1/InfoTimeResponse")]
+        System.Threading.Tasks.Task<long> InfoTimeAsync();
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -63,12 +63,12 @@ namespace WCFclient.ServiceReference1 {
             return base.Channel.TryAccessAsync(value);
         }
         
-        public void UpdateInfoHash(TFGService.Access access, string ip) {
-            base.Channel.UpdateInfoHash(access, ip);
+        public long InfoTime() {
+            return base.Channel.InfoTime();
         }
         
-        public System.Threading.Tasks.Task UpdateInfoHashAsync(TFGService.Access access, string ip) {
-            return base.Channel.UpdateInfoHashAsync(access, ip);
+        public System.Threading.Tasks.Task<long> InfoTimeAsync() {
+            return base.Channel.InfoTimeAsync();
         }
     }
 }

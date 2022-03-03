@@ -16,7 +16,11 @@ namespace TFGService
         private int numAccessList;
         private bool accessDenied;
         private bool accessAllowed;
+        private bool access;
+        private bool accessURL;
         private bool vpn;
+        private DateTime firstAccess;
+        private DateTime lastAccess;
 
         public InfoHash(String action)
         {
@@ -26,11 +30,16 @@ namespace TFGService
             target = action;
             accessAllowed = false;
             accessDenied = false;
+            access = true;
+            accessURL = true;
             vpn = false;
+            firstAccess = DateTime.Now;
+            lastAccess = DateTime.Now;
         }
 
         public void AddAccess(string type)
         {
+            lastAccess = DateTime.Now;
             numAccess ++;
             switch (type)
             {
@@ -46,6 +55,16 @@ namespace TFGService
                 default:
                     break;
             }
+        }
+
+        public void ResetAccesses()
+        {
+            firstAccess = DateTime.Now;
+            lastAccess = DateTime.Now;
+            numAccess = 1;
+            numAccessButton = 0;
+            numAccessURL = 0;
+            numAccessList = 0;
         }
 
         public void AllowAccess()
@@ -67,6 +86,27 @@ namespace TFGService
             accessAllowed = false;
         }
 
+        public void Access(bool perm)
+        {
+            access = perm;
+        }
+
+        public void AccessURL(bool perm)
+        {
+            accessURL = perm;
+        }
+
+        public long TimeFromLastAccess()
+        {
+            return DateTime.Now.Ticks - lastAccess.Ticks;
+        }
+
+        public long TimeFromFirstAccess()
+        {
+            return DateTime.Now.Ticks - firstAccess.Ticks;
+        }
+
+        //Getters
         public string Service()
         {
             return target;
@@ -92,9 +132,19 @@ namespace TFGService
             return numAccessList;
         }
 
-        public bool AccessDenied ()
+        public bool AccessDenied()
         {
             return accessDenied;
+        }
+
+        public bool Access()
+        {
+            return access;
+        }
+
+        public bool AccessURL()
+        {
+            return accessURL;
         }
 
         public bool AccessAllowed()
@@ -105,6 +155,16 @@ namespace TFGService
         public bool VPN()
         {
             return vpn;
+        }
+
+        public DateTime FirstAccess()
+        {
+            return firstAccess;
+        }
+
+        public DateTime LastAccess()
+        {
+            return lastAccess;
         }
 
     }
