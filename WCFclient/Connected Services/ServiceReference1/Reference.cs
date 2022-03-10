@@ -20,12 +20,6 @@ namespace WCFclient.ServiceReference1 {
         
         [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/TryAccess", ReplyAction="http://tempuri.org/IService1/TryAccessResponse")]
         System.Threading.Tasks.Task<byte> TryAccessAsync(TFGService.Access value);
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/InfoTime", ReplyAction="http://tempuri.org/IService1/InfoTimeResponse")]
-        long InfoTime();
-        
-        [System.ServiceModel.OperationContractAttribute(Action="http://tempuri.org/IService1/InfoTime", ReplyAction="http://tempuri.org/IService1/InfoTimeResponse")]
-        System.Threading.Tasks.Task<long> InfoTimeAsync();
     }
     
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.ServiceModel", "4.0.0.0")]
@@ -61,14 +55,6 @@ namespace WCFclient.ServiceReference1 {
         
         public System.Threading.Tasks.Task<byte> TryAccessAsync(TFGService.Access value) {
             return base.Channel.TryAccessAsync(value);
-        }
-        
-        public long InfoTime() {
-            return base.Channel.InfoTime();
-        }
-        
-        public System.Threading.Tasks.Task<long> InfoTimeAsync() {
-            return base.Channel.InfoTimeAsync();
         }
     }
 }

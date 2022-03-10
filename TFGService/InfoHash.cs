@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -8,8 +9,8 @@ namespace TFGService
 {
     public class InfoHash
     {
-        private string target;
-        private string sesionID;
+        //private string target;
+        private ConcurrentDictionary<String, int> sessionIDs;
         private int numAccess;
         private int numAccessURL;
         private int numAccessButton;
@@ -21,13 +22,15 @@ namespace TFGService
         private bool vpn;
         private DateTime firstAccess;
         private DateTime lastAccess;
-
-        public InfoHash(String action)
+        private DateTime interval;
+        private ConcurrentDictionary<long, int> times;
+        public InfoHash()
         {
             numAccess = 0;
             numAccessButton = 0;
             numAccessURL = 0;
-            target = action;
+            numAccessList = 0;
+            sessionIDs = new ConcurrentDictionary<String, int>(); //Número de veces que se accede con ese ID de sesión
             accessAllowed = false;
             accessDenied = false;
             access = true;
@@ -35,10 +38,12 @@ namespace TFGService
             vpn = false;
             firstAccess = DateTime.Now;
             lastAccess = DateTime.Now;
+            times = new ConcurrentDictionary<long, int>(); //Tiempos de espera para acceder
         }
 
-        public void AddAccess(string type)
+        public void AddAccess(String type, String id)
         {
+            GetPeriodNumber();
             lastAccess = DateTime.Now;
             numAccess ++;
             switch (type)
@@ -55,6 +60,23 @@ namespace TFGService
                 default:
                     break;
             }
+
+            if (sessionIDs.ContainsKey(id))
+            {
+                sessionIDs[id]++;
+            }
+            else
+            {
+                sessionIDs.TryAdd(id, 1);
+            }
+            //sessionIDs.GetOrAdd(id,0);
+        }
+
+        public int GetPeriodNumber()
+        {
+            long period = TimeFromLastAccess() / TimeSpan.TicksPerSecond;
+            times.GetOrAdd(period, 0);
+            return times[period]++;
         }
 
         public void ResetAccesses()
@@ -65,6 +87,8 @@ namespace TFGService
             numAccessButton = 0;
             numAccessURL = 0;
             numAccessList = 0;
+            sessionIDs.Clear();
+            times.Clear();
         }
 
         public void AllowAccess()
@@ -72,18 +96,23 @@ namespace TFGService
             accessAllowed = true;
             accessDenied = false;
             vpn = false;
+            access = true;
         }
 
         public void DenyAccess()
         {
             accessDenied = true;
-            accessAllowed = false;
+            //accessAllowed = false;
+            vpn = false;
+            access = false;
         }
 
         public void IsVPN()
         {
             vpn = true;
             accessAllowed = false;
+            accessDenied = false;
+            access = false;
         }
 
         public void Access(bool perm)
@@ -107,10 +136,10 @@ namespace TFGService
         }
 
         //Getters
-        public string Service()
+        /*public string Service()
         {
             return target;
-        }
+        }*/
 
         public int NumAccess()
         {
@@ -165,6 +194,11 @@ namespace TFGService
         public DateTime LastAccess()
         {
             return lastAccess;
+        }
+
+        public ConcurrentDictionary<long, int> Times()
+        {
+            return times;
         }
 
     }

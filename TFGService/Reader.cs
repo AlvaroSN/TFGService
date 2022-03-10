@@ -13,17 +13,21 @@ namespace TFGService
         public static HashSet<String> whiteList = new HashSet<String>();
         public static HashSet<String> blackList = new HashSet<String>();
         public static HashSet<String> vpnList = new HashSet<String>();
+        public static string blackListFile = "C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt";
+        public static string whiteListFile = "C:\\inetpub\\ServicioIPControlWCF\\listablanca.txt";
+        public static string vpnListFile = "C:\\inetpub\\ServicioIPControlWCF\\VPN.txt";
         public Reader()
         {
             //LLamada a las funciones encargadas de leer los archivos e insertar las direcciones en los hashes
-            ReadBlacklist("C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt");
-            ReadWhitelist("C:\\inetpub\\ServicioIPControlWCF\\listablanca.txt");
-            ReadVPN("C:\\inetpub\\ServicioIPControlWCF\\VPN.txt");
+            ReadBlacklist(blackListFile);
+            ReadWhitelist(whiteListFile);
+            ReadVPN(vpnListFile);
         }
 
         private static void ReadBlacklist(string url)
         {
             StreamReader blacklistFile = null;
+            blackList.Clear();
             try
             {
                 blacklistFile = new StreamReader(url);
@@ -46,6 +50,7 @@ namespace TFGService
         private static void ReadWhitelist(string url)
         {
             StreamReader whitelistFile = null;
+            whiteList.Clear();
             try
             {
                 whitelistFile = new StreamReader(url);
@@ -68,6 +73,7 @@ namespace TFGService
         private static void ReadVPN(string url)
         {
             StreamReader vpnFile = null;
+            vpnList.Clear();
             try
             {
                 vpnFile = new StreamReader(url);
@@ -85,6 +91,32 @@ namespace TFGService
             {
                 if (vpnFile != null) vpnFile.Close();
             }
+        }
+
+        public void AddIpToBlackList(string ip, InfoHash info)
+        {
+            info.DenyAccess();
+            StreamReader sr = new StreamReader(blackListFile);
+            string content = sr.ReadToEnd();
+            sr.Close();
+            if (!content.Contains(ip))
+            {
+                //Corregir escritura concurrente
+                StreamWriter list = new StreamWriter(blackListFile, true, System.Text.Encoding.Default);
+                list.WriteLine("");
+                list.WriteLine(ip);
+                list.Close();
+            }
+            
+
+            /*foreach (string line in System.IO.File.ReadLines(@"C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt"))
+            {
+                if (line == ip)
+                {
+                    flag = false;
+                }
+            }*/
+            
         }
 
         //Getters

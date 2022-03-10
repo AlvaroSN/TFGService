@@ -27,11 +27,13 @@ namespace TFGService
         //Tipo de acceso: por botón, por lista o por URL
         public string Type { get; set; }
         [DataMember]
-        //Cambiar el nombre
-        public string Service { get; set; }
+        //Nombre de la aplicación alojada en el servidor a la que se accede
+        public string App { get; set; }
         [DataMember]
+        //ID de sesión de acceso al servidor
         public string ID { get; set; }
         [DataMember]
+        //Dirección IP del equipo que intenta acceder el servidor
         public string IP { get; set; }
     }
 

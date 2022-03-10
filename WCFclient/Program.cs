@@ -15,42 +15,70 @@ namespace WCFclient
         {
 
             Console.WriteLine("Comienzo de servicio");
-            Access access1 = new Access() { IP = "0.0.0.1", ID = "1", Service = "Servicio1", Type = "button" };
-            Access access2 = new Access() { IP = "0.0.0.8", ID = "2", Service = "Servicio1", Type = "url" };
-            Access access3 = new Access() { IP = "0.0.0.15", ID = "1", Service = "Servicio2", Type = "lista" };
-            Access access4 = new Access() { IP = "1.1.0.0", ID = "1", Service = "Servicio2", Type = "lista" };
+            //Acceso con IP en lista negra
+            Access access1 = new Access() { IP = "0.0.0.1", ID = "1", App = "Servicio1", Type = "button" };
+            //Acceso con IP en lista blanca
+            Access access2 = new Access() { IP = "0.0.0.8", ID = "2", App = "Servicio1", Type = "url" };
+            //Acceso con VPN
+            Access access3 = new Access() { IP = "1.1.0.0", ID = "1", App = "Servicio2", Type = "list" };
+            //Accesos libres
+            Access access4 = new Access() { IP = "0.0.0.15", ID = "1", App= "Servicio2", Type = "button" };
+            Access access5 = new Access() { IP = "0.0.0.16", ID = "1", App = "Servicio2", Type = "button" };
+            Access access6 = new Access() { IP = "0.0.0.17", ID = "1", App = "Servicio2", Type = "url" };
+            Access access7 = new Access() { IP = "2.0.0.0", ID = "1", App = "Servicio2", Type = "list" };
+            Access access8 = new Access() { IP = "0.0.0.18", ID = "1", App = "Servicio2", Type = "list" };
+            Access access9 = new Access() { IP = "0.0.0.19", ID = "1", App = "Servicio2", Type = "list" };
 
-            UserAccess(access1,4,1000,true);
-            UserAccess(access2,2,0,false);
-            UserAccess(access3,3,0,false);
-            UserAccess(access4,2,0,false);
-            UserAccess(access3,5,0,true);
+            using (ServiceReference1.Service1Client client = new ServiceReference1.Service1Client())
+            {
+                //Pruebas listas
+                UserAccess(client,access1,3,500,false);
+                UserAccess(client,access2,3,0,false);
+                UserAccess(client,access3,3,500,true);
+
+                //Prueba máximo total de accesos
+                UserAccess(client,access4,25,200,true);
+
+                //Prueba reseteo de accesos
+                UserAccess(client, access5, 12, 500, false);
+                UserAccess(client, access5, 1, 8000, false);
+                UserAccess(client, access5, 12, 500, true);
+
+                //Prueba timer
+                UserAccess(client, access7, 5, 100, true);
+
+                //Prueba accesos por URL
+                UserAccess(client, access6, 6, 100, true);
+
+                //Prueba máximo accesos por tiempo
+                UserAccess(client, access8, 13, 0, true);
+
+                //Prueba de periodicidad
+                //UserAccess(client, access9, 5, 200, false);
+                //UserAccess(client, access9, 5, 300, true);
+            }
 
         }
 
-        public static void UserAccess(Access access, int n, int ms, bool last)
+        public static void UserAccess(ServiceReference1.Service1Client client, Access access, int n, int ms, bool end)
         {
             byte result;
-            using (ServiceReference1.Service1Client client = new ServiceReference1.Service1Client())
+            for (int i = 0; i<n; i++)
             {
-                for (int i = 0; i<n; i++)
-                {
-                    result = client.TryAccess(access);
-                    Console.WriteLine(access.IP + " intenta acceder...");
-                    Thread.Sleep(500);
-                    Console.WriteLine("Byte:" + result + " -> " + Result(result));
-                    Console.WriteLine("");
-                    Thread.Sleep(ms);
-                }
-                
-                if (last)
-                {
-                    Console.WriteLine("\nPulsa <Enter> para terminar el cliente.");
-                    Console.ReadLine();
-                    client.Close();
-                }
-
+                result = client.TryAccess(access);
+                Console.WriteLine(access.IP + " intenta acceder por " + (i+1) + "ª vez");
+                Console.WriteLine("Byte:" + result + " -> " + Result(result));
+                Console.WriteLine("");
+                Thread.Sleep(ms);
             }
+            Console.WriteLine("--------------------------------------------------------------------");
+            
+            if(end)
+            {
+                Console.WriteLine("\nPulsa <Enter> para continuar.");
+                Console.ReadLine();
+            }
+            
         }
 
         public static string Result(byte x)
@@ -64,9 +92,13 @@ namespace WCFclient
                 case 2:
                     return "El usuario no pudo acceder(VPN)";
                 case 3:
-                    return "El usuario superó el número de accesos permitidos";
+                    return "El usuario no puede acceder";
+                case 4:
+                    return "El usuario no puede acceder por URL";
+                case 5:
+                    return "El usuario acceso periódicamente";
                 default:
-                    return string.Format("El usuario pudo acceder");
+                    return "El usuario pudo acceder";
 
             }
         }

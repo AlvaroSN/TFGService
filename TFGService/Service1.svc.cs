@@ -31,6 +31,8 @@ namespace TFGService
         //Variable que indica los segundos que tiene que estar una dirección sin acceder para que se restaure su número de consultas
         public static readonly long timeReset = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeReset"]);
 
+        public static readonly int minPeriodAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["minPeriodAccess"]);
+        
 
 
         //Hash donde se van a almacenar los accesos al servidor
@@ -42,7 +44,7 @@ namespace TFGService
         public static HashSet<String> whiteList;    //Listas de direcciones permitidas
         public static HashSet<String> blackList;    //Listas de direcciones que tiene prohibido el acceso al servidor
         public static HashSet<String> vpnList;      //Lista de direcciones que son VPNs, que tampoco tienen acceso
-        //Fichero de escritura del log
+        //Fichero de escritura del log de accesos al servidor
         public static String registerFile = "C:\\inetpub\\ServicioIPControlWCF\\registro.txt";
 
         public Service1()
@@ -76,11 +78,6 @@ namespace TFGService
             register.WriteLine(ip);
             register.Close();
 
-            /*if (!ipHash.ContainsKey(ip))
-            {
-                ipHash.TryAdd(ip, new InfoHash("Servicio"));
-            }*/
-
             //Prevalece la lista blanca
             if (whiteList.Contains(ip))
             {
@@ -112,41 +109,54 @@ namespace TFGService
             //Comprobar si la ip supera el número máximo de intentos permitidos
             if (info.NumAccess() > maxAccess)
             {
-                info.Access(false);
+                reader.AddIpToBlackList(access.IP, info);
             }
 
+            //Comprobar si el número de accesos por URLs supera al máximo permitido
             if (info.NumAccessURL() > maxAccessURL)
             {
                 info.AccessURL(false);
             }
 
-            if (info.NumAccess() >= maxAccessTime && info.TimeFromFirstAccess() >= maxTime * TimeSpan.TicksPerSecond)
+            //Comprobar número máximo de accesos por tiempo
+            if (info.NumAccess() >= maxAccessTime && info.TimeFromFirstAccess() <= maxTime * TimeSpan.TicksPerSecond)
             {
                 info.Access(false);
             }
 
-            if (info.TimeFromLastAccess() < timeReset * TimeSpan.TicksPerSecond)
+            //Tiempo de reseteo de los accesos
+            if (info.TimeFromLastAccess() >= timeReset * TimeSpan.TicksPerSecond)
             {
                 info.ResetAccesses();
             }
 
+            //Chequear si el número de periodos es mayor que el 80% del número total de accesos
+            /*int x = info.GetPeriodNumber();
+            if (x > info.NumAccess() * 0.8 && x > minPeriodAccess)
+            {
+                info.Access(false);
+            }*/
             
         }
 
         public void UpdateInfoHash(Access access, InfoHash info)
         {
-            info.AddAccess(access.Type);
-            CheckAccess(access, info);
+            info.AddAccess(access.Type, access.ID);
             ControlList(access.IP, info);
+            CheckAccess(access, info);
         }
 
 
         public byte TryAccess(Access access)
         {
+            if (!ipHash.ContainsKey(access.IP))
+            {
+                ipHash.TryAdd(access.IP, new InfoHash());
+            } 
             //Si hay algún problema se le da acceso al cliente
             try
             {
-                InfoHash info = ipHash.GetOrAdd(access.IP, new InfoHash(access.Service));
+                InfoHash info = ipHash.GetOrAdd(access.IP, new InfoHash());
                 CheckAccess(access, info);
                 //Se lanza un nuevo con la función encargada de controlar el acceso de la dirección IP
                 new Task(() => UpdateInfoHash(access, info)).Start();
@@ -156,12 +166,14 @@ namespace TFGService
                 if (info.VPN()) return 2;               //Es una VPN
                 if (info.AccessDenied()) return 1;      //Está en la lista negra
 
+                if (!info.AccessURL()) return 4;
+
                 if (info.Access()) {
                     return 0;
                 } 
                 else
                 {
-                    return 1;
+                    return 3;
                 }
                 
             }

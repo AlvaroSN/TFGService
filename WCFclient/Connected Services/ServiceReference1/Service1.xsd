@@ -15,16 +15,4 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
-  <xs:element name="InfoTime">
-    <xs:complexType>
-      <xs:sequence />
-    </xs:complexType>
-  </xs:element>
-  <xs:element name="InfoTimeResponse">
-    <xs:complexType>
-      <xs:sequence>
-        <xs:element minOccurs="0" name="InfoTimeResult" type="xs:long" />
-      </xs:sequence>
-    </xs:complexType>
-  </xs:element>
 </xs:schema>
