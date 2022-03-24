@@ -103,7 +103,6 @@ namespace TFGService
             {
                 //Corregir escritura concurrente
                 StreamWriter list = new StreamWriter(blackListFile, true, System.Text.Encoding.Default);
-                list.WriteLine("");
                 list.WriteLine(ip);
                 list.Close();
             }

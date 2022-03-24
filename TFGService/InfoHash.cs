@@ -9,43 +9,60 @@ namespace TFGService
 {
     public class InfoHash
     {
+        private int maxAccessTime = Service1.maxAccessTime;
+        private int maxPeriodAccess = Service1.maxPeriodAccess;
         //private string target;
-        private ConcurrentDictionary<String, int> sessionIDs;
-        private int numAccess;
-        private int numAccessURL;
-        private int numAccessButton;
-        private int numAccessList;
-        private bool accessDenied;
-        private bool accessAllowed;
-        private bool access;
-        private bool accessURL;
-        private bool vpn;
-        private DateTime firstAccess;
-        private DateTime lastAccess;
-        private DateTime interval;
-        private ConcurrentDictionary<long, int> times;
+        private int sessionIDs;             //Número de ids de sesión con los que se ha accedido
+        private String lastSessionsID;      //Último id de sesión con el que se ha intentado acceder 
+        private List<String> sessionIDList;
+        private int numAccess;              //Número total de accesos
+        private int numFailAccess;          //Número total de accesos, después de se le haya denegado el acceso
+        private int numAccessURL;           //Número de accesos por URL
+        private int numAccessButton;        //Número de accesos por botón
+        private int numAccessList;          //Número de accesos por lista
+        private bool access;                //Variable para controlar el permiso de acceso
+        private bool accessDenied;          //Acceso denegado permanente
+        private bool accessAllowed;         //Acceso permito permanente
+        private bool accessURL;             //Control de acceso por URL
+        private bool accessList;            //COntrol de acceso por lista
+        private bool vpn;                   //Acceso denegado a VPNs
+        private DateTime firstAccess;       //Primer acceso
+        private DateTime lastAccess;        //Último acceso
+        private List<long> timeouts;        //Tiempos de espera para acceder
+        private long timeout;               //Tiempo en los últimos accesos
+        private List<long> periods;
+        private double periodCheck;
+
         public InfoHash()
         {
+            sessionIDs = 0;             
+            lastSessionsID = null;
+            sessionIDList = new List<String>();
             numAccess = 0;
-            numAccessButton = 0;
-            numAccessURL = 0;
-            numAccessList = 0;
-            sessionIDs = new ConcurrentDictionary<String, int>(); //Número de veces que se accede con ese ID de sesión
-            accessAllowed = false;
-            accessDenied = false;
-            access = true;
-            accessURL = true;
-            vpn = false;
-            firstAccess = DateTime.Now;
-            lastAccess = DateTime.Now;
-            times = new ConcurrentDictionary<long, int>(); //Tiempos de espera para acceder
+            numFailAccess = 0;
+            numAccessButton = 0;        
+            numAccessURL = 0;           
+            numAccessList = 0;          
+            access = true;              
+            accessAllowed = false;      
+            accessDenied = false;       
+            accessURL = true;           
+            accessList = true;          
+            vpn = false;                
+            firstAccess = DateTime.Now; 
+            lastAccess = DateTime.Now;  
+            timeouts = new List<long>(); 
+            timeout = 0;
+            periods = new List<long>();
+            periodCheck = 0;
         }
 
         public void AddAccess(String type, String id)
         {
-            GetPeriodNumber();
             lastAccess = DateTime.Now;
-            numAccess ++;
+            numAccess++;
+            if (!access) numFailAccess++;
+
             switch (type)
             {
                 case "button":
@@ -60,35 +77,72 @@ namespace TFGService
                 default:
                     break;
             }
-
-            if (sessionIDs.ContainsKey(id))
-            {
-                sessionIDs[id]++;
-            }
-            else
-            {
-                sessionIDs.TryAdd(id, 1);
-            }
-            //sessionIDs.GetOrAdd(id,0);
-        }
-
-        public int GetPeriodNumber()
-        {
-            long period = TimeFromLastAccess() / TimeSpan.TicksPerSecond;
-            times.GetOrAdd(period, 0);
-            return times[period]++;
+            lastSessionsID = id;
+            if (!sessionIDList.Contains(id)) sessionIDList.Add(id);
+            sessionIDs = sessionIDList.Count;
+            SetTimeAtMaxAccess();
+            SetPeriods();
         }
 
         public void ResetAccesses()
         {
             firstAccess = DateTime.Now;
             lastAccess = DateTime.Now;
-            numAccess = 1;
+            numAccess = 0;
+            numFailAccess = 0;
             numAccessButton = 0;
             numAccessURL = 0;
             numAccessList = 0;
-            sessionIDs.Clear();
-            times.Clear();
+            sessionIDs = 0;
+            lastSessionsID = null;
+            timeout = 0;
+            timeouts.Clear();
+            periodCheck = 0;
+            periods.Clear();
+            sessionIDList.Clear();
+        }
+
+        public void SetTimeAtMaxAccess()
+        {
+            if (numAccess <= maxAccessTime)
+            {
+                timeouts.Add(DateTime.Now.Ticks);
+            } 
+            else
+            {
+                timeouts.RemoveAt(0);
+                timeouts.Add(DateTime.Now.Ticks);
+                timeout = timeouts.Last() - timeouts.First();
+            }
+            
+        }
+
+        public void SetPeriods()
+        {
+            if (numAccess <= maxPeriodAccess)
+            {
+                periods.Add(TimeFromLastAccess());
+            }
+            else
+            {
+                periods.RemoveAt(0);
+                periods.Add(TimeFromLastAccess());
+                periodCheck = Deviation(periods);
+            }
+
+        }
+
+        //Cáculo de la desviación típica
+        public double Deviation(List<long> list)
+        {
+            double standardDeviation = 0;
+            if (list.Any())
+            {
+                double avg = list.Average();  
+                double sum = list.Sum(d => Math.Pow(d - avg, 2)); 
+                standardDeviation = Math.Sqrt((sum) / (list.Count() - 1));
+            }
+            return standardDeviation;
         }
 
         public void AllowAccess()
@@ -102,7 +156,7 @@ namespace TFGService
         public void DenyAccess()
         {
             accessDenied = true;
-            //accessAllowed = false;
+            accessAllowed = false;
             vpn = false;
             access = false;
         }
@@ -125,6 +179,11 @@ namespace TFGService
             accessURL = perm;
         }
 
+        public void AccessList(bool perm)
+        {
+            accessList = perm;
+        }
+
         public long TimeFromLastAccess()
         {
             return DateTime.Now.Ticks - lastAccess.Ticks;
@@ -144,6 +203,11 @@ namespace TFGService
         public int NumAccess()
         {
             return numAccess;
+        }
+
+        public int NumFailAccess()
+        {
+            return numFailAccess;
         }
 
         public int NumAccessButton()
@@ -176,6 +240,11 @@ namespace TFGService
             return accessURL;
         }
 
+        public bool AccessList()
+        {
+            return accessList;
+        }
+
         public bool AccessAllowed()
         {
             return accessAllowed;
@@ -196,9 +265,24 @@ namespace TFGService
             return lastAccess;
         }
 
-        public ConcurrentDictionary<long, int> Times()
+        public long Timeout()
         {
-            return times;
+            return timeouts.Last() - timeouts.First();
+        }
+
+        public double PeriodCheck()
+        {
+            return periodCheck;
+        }
+
+        public string LastSessionsID()
+        {
+            return lastSessionsID;
+        }
+
+        public int SessionIDs ()
+        {
+            return sessionIDList.Count;
         }
 
     }

@@ -31,7 +31,7 @@ namespace TFGService
         //Variable que indica los segundos que tiene que estar una dirección sin acceder para que se restaure su número de consultas
         public static readonly long timeReset = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeReset"]);
 
-        public static readonly int minPeriodAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["minPeriodAccess"]);
+        public static readonly int maxPeriodAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxPeriodAccess"]);
         
 
 
@@ -106,41 +106,60 @@ namespace TFGService
         //Función donde se comprueban los casos concretos en cada acceso (puedo llamarlo desde controlList) 
         public void CheckAccess(Access access, InfoHash info)
         {
-            //Comprobar si la ip supera el número máximo de intentos permitidos
-            if (info.NumAccess() > maxAccess)
+            //Si un usuario sigue accediendo aunque no tenga permiso, se le añade a la lista negra
+            if (info.NumFailAccess() >= 10)
+            {
+                //reader.AddIpToBlackList(access.IP, info);
+                return;
+            }
+
+            //Comprobar número máximo de accesos por tiempo
+            if (info.NumAccess() > 10 && info.Timeout() < maxTime * TimeSpan.TicksPerSecond)
             {
                 reader.AddIpToBlackList(access.IP, info);
             }
 
-            //Comprobar si el número de accesos por URLs supera al máximo permitido
+            //Comprobar que no se accede periódicamente, un máximo número de veces, usando la desviación típica
+            if (info.PeriodCheck() <= 1)
+            {
+                //reader.AddIpToBlackList(access.IP, info);
+            }
+
+            //Comprobar si se está accediendo con muchas sesiones diferentes
+            if (info.NumAccess() > 5 && info.NumAccess() - info.SessionIDs() < 2)
+            {
+                //reader.AddIpToBlackList(access.IP, info);
+            }
+
+            //Comprobar si la ip supera el número máximo de intentos permitidos
+            if (info.NumAccess() > maxAccess)
+            {
+                info.Access(false);
+            }
+
+            //Comprobar si el número de accesos por URL supera al máximo permitido
             if (info.NumAccessURL() > maxAccessURL)
             {
                 info.AccessURL(false);
             }
 
-            //Comprobar número máximo de accesos por tiempo
-            if (info.NumAccess() >= maxAccessTime && info.TimeFromFirstAccess() <= maxTime * TimeSpan.TicksPerSecond)
+            //Comprobar si el número de accesos por lista supera al máximo permitido
+            if (info.NumAccessList() > maxAccessURL)
             {
-                info.Access(false);
+                info.AccessList(false);
             }
 
+            
+        }
+
+        public void UpdateInfoHash(Access access, InfoHash info)
+        {
             //Tiempo de reseteo de los accesos
             if (info.TimeFromLastAccess() >= timeReset * TimeSpan.TicksPerSecond)
             {
                 info.ResetAccesses();
             }
 
-            //Chequear si el número de periodos es mayor que el 80% del número total de accesos
-            /*int x = info.GetPeriodNumber();
-            if (x > info.NumAccess() * 0.8 && x > minPeriodAccess)
-            {
-                info.Access(false);
-            }*/
-            
-        }
-
-        public void UpdateInfoHash(Access access, InfoHash info)
-        {
             info.AddAccess(access.Type, access.ID);
             ControlList(access.IP, info);
             CheckAccess(access, info);
@@ -157,7 +176,6 @@ namespace TFGService
             try
             {
                 InfoHash info = ipHash.GetOrAdd(access.IP, new InfoHash());
-                CheckAccess(access, info);
                 //Se lanza un nuevo con la función encargada de controlar el acceso de la dirección IP
                 new Task(() => UpdateInfoHash(access, info)).Start();
 
@@ -167,6 +185,7 @@ namespace TFGService
                 if (info.AccessDenied()) return 1;      //Está en la lista negra
 
                 if (!info.AccessURL()) return 4;
+                if (!info.AccessList()) return 6;
 
                 if (info.Access()) {
                     return 0;
