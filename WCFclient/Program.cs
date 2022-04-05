@@ -32,6 +32,7 @@ namespace WCFclient
             Access access94 = new Access() { IP = "0.0.0.19", ID = "4", App = "Servicio2", Type = "button" };
             Access access95 = new Access() { IP = "0.0.0.19", ID = "5", App = "Servicio2", Type = "button" };
             Access access96 = new Access() { IP = "0.0.0.19", ID = "6", App = "Servicio2", Type = "button" };
+            Access access10 = new Access() { IP = "0.0.0.20", ID = "6", App = "Servicio2", Type = "button" };
 
             using (ServiceReference1.Service1Client client = new ServiceReference1.Service1Client())
             {
@@ -55,13 +56,21 @@ namespace WCFclient
                 UserAccess(client, access6, 6, 100, true);
 
                 //Prueba máximo accesos por tiempo
-                UserAccess(client, access8, 13, 0, true);*/
+                UserAccess(client,access8,9,500,false);
+                Thread.Sleep(5000);
+                UserAccess(client,access8,15,50,true);*/
 
                 //Prueba de periodicidad
                 //UserAccess(client, access9, 5, 200, false);
                 //UserAccess(client, access9, 5, 300, true);
 
-                UserAccess(client, access8,15,50,true);
+                //Prueba de borrado de ipHash
+                /*UserAccess(client, access10, 10, 0, false);
+                Thread.Sleep(6000);
+                UserAccess(client, access10, 15, 0, true);*/
+
+                UserAccess(client, access10, 15, -1, true);
+
             }
 
         }
@@ -77,7 +86,7 @@ namespace WCFclient
                 Console.WriteLine(access.IP + " intenta acceder por " + (i+1) + "ª vez");
                 Console.WriteLine("Byte:" + result + " -> " + Result(result));
                 Console.WriteLine("");
-                if (ms < 0) x = rand.Next(1001);
+                if (ms < 0) x = rand.Next(2001);
                 Thread.Sleep(x);
             }
             Console.WriteLine("--------------------------------------------------------------------");

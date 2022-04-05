@@ -11,10 +11,7 @@ namespace TFGService
     {
         private int maxAccessTime = Service1.maxAccessTime;
         private int maxPeriodAccess = Service1.maxPeriodAccess;
-        //private string target;
-        private int sessionIDs;             //Número de ids de sesión con los que se ha accedido
-        private String lastSessionsID;      //Último id de sesión con el que se ha intentado acceder 
-        private List<String> sessionIDList;
+        private HashSet<String> sessionIDList;
         private int numAccess;              //Número total de accesos
         private int numFailAccess;          //Número total de accesos, después de se le haya denegado el acceso
         private int numAccessURL;           //Número de accesos por URL
@@ -28,16 +25,12 @@ namespace TFGService
         private bool vpn;                   //Acceso denegado a VPNs
         private DateTime firstAccess;       //Primer acceso
         private DateTime lastAccess;        //Último acceso
-        private List<long> timeouts;        //Tiempos de espera para acceder
-        private long timeout;               //Tiempo en los últimos accesos
-        private List<long> periods;
-        private double periodCheck;
+        private Queue<long> timeouts;       //Cola para chequear los accesos por tiempo
+        private Queue<long> periods;        //Cola para chequear los accesos periódicos
 
         public InfoHash()
         {
-            sessionIDs = 0;             
-            lastSessionsID = null;
-            sessionIDList = new List<String>();
+            sessionIDList = new HashSet<String>();
             numAccess = 0;
             numFailAccess = 0;
             numAccessButton = 0;        
@@ -51,17 +44,14 @@ namespace TFGService
             vpn = false;                
             firstAccess = DateTime.Now; 
             lastAccess = DateTime.Now;  
-            timeouts = new List<long>(); 
-            timeout = 0;
-            periods = new List<long>();
-            periodCheck = 0;
+            timeouts = new Queue<long>(); 
+            periods = new Queue<long>();
         }
 
         public void AddAccess(String type, String id)
         {
-            lastAccess = DateTime.Now;
             numAccess++;
-            if (!access) numFailAccess++;
+            if (!access) numFailAccess++;   //Se suma el número de accesos cuando no tienes permiso
 
             switch (type)
             {
@@ -77,11 +67,11 @@ namespace TFGService
                 default:
                     break;
             }
-            lastSessionsID = id;
+            //Añadir ID de sesión al hashset si no ha accedido antes
             if (!sessionIDList.Contains(id)) sessionIDList.Add(id);
-            sessionIDs = sessionIDList.Count;
-            SetTimeAtMaxAccess();
-            SetPeriods();
+            SetTimeAtMaxAccess();       //Comprobar que no se supere un número máximo de accesos por tiempo
+            SetPeriods();               //Comprobar que no se producen accesos periódicos
+            lastAccess = DateTime.Now;  //Actualizar fecha del último acceso
         }
 
         public void ResetAccesses()
@@ -93,11 +83,7 @@ namespace TFGService
             numAccessButton = 0;
             numAccessURL = 0;
             numAccessList = 0;
-            sessionIDs = 0;
-            lastSessionsID = null;
-            timeout = 0;
             timeouts.Clear();
-            periodCheck = 0;
             periods.Clear();
             sessionIDList.Clear();
         }
@@ -106,13 +92,12 @@ namespace TFGService
         {
             if (numAccess <= maxAccessTime)
             {
-                timeouts.Add(DateTime.Now.Ticks);
+                timeouts.Enqueue(DateTime.Now.Ticks);
             } 
             else
             {
-                timeouts.RemoveAt(0);
-                timeouts.Add(DateTime.Now.Ticks);
-                timeout = timeouts.Last() - timeouts.First();
+                timeouts.Dequeue();
+                timeouts.Enqueue(DateTime.Now.Ticks);
             }
             
         }
@@ -121,19 +106,18 @@ namespace TFGService
         {
             if (numAccess <= maxPeriodAccess)
             {
-                periods.Add(TimeFromLastAccess());
+                periods.Enqueue(TimeFromLastAccess() / TimeSpan.TicksPerSecond);
             }
             else
             {
-                periods.RemoveAt(0);
-                periods.Add(TimeFromLastAccess());
-                periodCheck = Deviation(periods);
+                periods.Dequeue();
+                periods.Enqueue(TimeFromLastAccess() / TimeSpan.TicksPerSecond);
             }
 
         }
 
         //Cáculo de la desviación típica
-        public double Deviation(List<long> list)
+        public double Deviation(Queue<long> list)
         {
             double standardDeviation = 0;
             if (list.Any())
@@ -194,12 +178,22 @@ namespace TFGService
             return DateTime.Now.Ticks - firstAccess.Ticks;
         }
 
-        //Getters
-        /*public string Service()
+        public long Timeout()
         {
-            return target;
-        }*/
+            return timeouts.Last() - timeouts.First();
+        }
 
+        public double PeriodCheck()
+        {
+            return Deviation(periods);
+        }
+
+        public int SessionIDs()
+        {
+            return sessionIDList.Count;
+        }
+
+        //Getters
         public int NumAccess()
         {
             return numAccess;
@@ -263,26 +257,6 @@ namespace TFGService
         public DateTime LastAccess()
         {
             return lastAccess;
-        }
-
-        public long Timeout()
-        {
-            return timeouts.Last() - timeouts.First();
-        }
-
-        public double PeriodCheck()
-        {
-            return periodCheck;
-        }
-
-        public string LastSessionsID()
-        {
-            return lastSessionsID;
-        }
-
-        public int SessionIDs ()
-        {
-            return sessionIDList.Count;
         }
 
     }

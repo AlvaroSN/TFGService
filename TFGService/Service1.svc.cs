@@ -29,14 +29,16 @@ namespace TFGService
         public static readonly int maxAccessTime = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccessTime"]);
         public static readonly int maxTime = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxTime"]);
         //Variable que indica los segundos que tiene que estar una dirección sin acceder para que se restaure su número de consultas
+        
         public static readonly long timeReset = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeReset"]);
+        public static readonly long timeClean = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeClean"]);
+        public static readonly long maxMultiIP = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["maxMultiIP"]);
 
         public static readonly int maxPeriodAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxPeriodAccess"]);
-        
-
 
         //Hash donde se van a almacenar los accesos al servidor
         private static ConcurrentDictionary<string, InfoHash> ipHash = new ConcurrentDictionary<string, InfoHash>();
+        private static ConcurrentDictionary<string, int> multiIPHash = new ConcurrentDictionary<string, int>();
         //Instacia de la clase Reader, que se encarga de la lectura de los ficheros para actualizar las siguientes listas:
         public static Reader reader;
 
@@ -54,6 +56,7 @@ namespace TFGService
             {
                 timer = new System.Timers.Timer(timeElapsed);
                 timer.Elapsed += SetReader;
+                timer.Elapsed += CleanHash;
                 timer.AutoReset = true;
                 timer.Enabled = true;
                 SetReader(null, null);
@@ -69,11 +72,34 @@ namespace TFGService
             vpnList = reader.VPNList();
         }
 
-        //Función para checkear las listas
-        public void ControlList(String ip, InfoHash info)
+        private static void CleanHash(object source, ElapsedEventArgs e)
+        {
+            HashSet<String> aux = new HashSet<String>();
+            InfoHash infoHash;
+
+            //Recorrer el ipHash para comprobar que ips llevan sin acceder el tiempo establecido
+            foreach (KeyValuePair<string, InfoHash> entry in ipHash)
+            {
+                if (entry.Value.TimeFromLastAccess() > timeClean * TimeSpan.TicksPerSecond)
+                {
+                    aux.Add(entry.Key);
+                }
+            }
+
+            //Borrar IPs guardadas del ipHash
+            foreach (var ip in aux)
+            {
+                lock (ipHash) ipHash.TryRemove(ip, out infoHash);
+            }
+
+            aux.Clear();
+        }
+
+            //Función para checkear las listas
+            public void ControlList(String ip, InfoHash info)
         {
 
-            //Escritura del registro de accesos
+            //Escritura del registro de accesos en el log
             StreamWriter register = new StreamWriter(registerFile, true, System.Text.Encoding.Default);
             register.WriteLine(ip);
             register.Close();
@@ -95,10 +121,14 @@ namespace TFGService
                 }
             }
 
-            if (blackList.Contains(ip))
+            //Y en último lugar si está en la lista negra
+            foreach (string line in blackList)
             {
-                info.DenyAccess();
-                return;
+                if (ip.StartsWith(line))
+                {
+                    info.DenyAccess();
+                    return;
+                }
             }
 
         }
@@ -109,7 +139,7 @@ namespace TFGService
             //Si un usuario sigue accediendo aunque no tenga permiso, se le añade a la lista negra
             if (info.NumFailAccess() >= 10)
             {
-                //reader.AddIpToBlackList(access.IP, info);
+                reader.AddIpToBlackList(access.IP, info);
                 return;
             }
 
@@ -117,18 +147,28 @@ namespace TFGService
             if (info.NumAccess() > 10 && info.Timeout() < maxTime * TimeSpan.TicksPerSecond)
             {
                 reader.AddIpToBlackList(access.IP, info);
+                return;
             }
 
             //Comprobar que no se accede periódicamente, un máximo número de veces, usando la desviación típica
-            if (info.PeriodCheck() <= 1)
+            if (info.NumAccess() > maxPeriodAccess && info.PeriodCheck() <= 1)
             {
-                //reader.AddIpToBlackList(access.IP, info);
+                reader.AddIpToBlackList(access.IP, info);
+                return;
             }
 
             //Comprobar si se está accediendo con muchas sesiones diferentes
             if (info.NumAccess() > 5 && info.NumAccess() - info.SessionIDs() < 2)
             {
-                //reader.AddIpToBlackList(access.IP, info);
+                reader.AddIpToBlackList(access.IP, info);
+                return;
+            }
+
+            //Comprobar multiIPs
+            if (CheckMultiIP(access.IP, info))
+            {
+                reader.AddIpToBlackList(access.IP, info);
+                return;
             }
 
             //Comprobar si la ip supera el número máximo de intentos permitidos
@@ -152,6 +192,17 @@ namespace TFGService
             
         }
 
+        public bool CheckMultiIP(String ip, InfoHash info)
+        {
+            if (info.NumAccessURL() > maxAccessURL / 2 && info.NumAccess() < 5)
+            {
+                String ipBeginning = ip.Substring(0, ip.LastIndexOf('.') - 1);
+                int num = multiIPHash.AddOrUpdate(ipBeginning, 1, (key, oldValue) => oldValue + 1);
+                if (num > maxMultiIP) return true;
+            }  
+            return false;
+        }
+
         public void UpdateInfoHash(Access access, InfoHash info)
         {
             //Tiempo de reseteo de los accesos
@@ -160,22 +211,26 @@ namespace TFGService
                 info.ResetAccesses();
             }
 
-            info.AddAccess(access.Type, access.ID);
+            //Siempre se prueba en que listas está la dirección IP
             ControlList(access.IP, info);
-            CheckAccess(access, info);
+
+            //Si la dirección IP está en la lista negra no se hace nada más
+            if (!info.AccessDenied())
+            {
+                info.AddAccess(access.Type, access.ID);
+                CheckAccess(access, info);
+            }              
         }
 
 
         public byte TryAccess(Access access)
         {
-            if (!ipHash.ContainsKey(access.IP))
-            {
-                ipHash.TryAdd(access.IP, new InfoHash());
-            } 
+            InfoHash info;
             //Si hay algún problema se le da acceso al cliente
             try
             {
-                InfoHash info = ipHash.GetOrAdd(access.IP, new InfoHash());
+                lock (ipHash) info = ipHash.GetOrAdd(access.IP, new InfoHash());
+
                 //Se lanza un nuevo con la función encargada de controlar el acceso de la dirección IP
                 new Task(() => UpdateInfoHash(access, info)).Start();
 
@@ -184,9 +239,11 @@ namespace TFGService
                 if (info.VPN()) return 2;               //Es una VPN
                 if (info.AccessDenied()) return 1;      //Está en la lista negra
 
+                //Casos en los que ya no pueda acceder más por URL o por Lista
                 if (!info.AccessURL()) return 4;
                 if (!info.AccessList()) return 6;
 
+                //Comprobar si tiene permiso de acceso
                 if (info.Access()) {
                     return 0;
                 } 
@@ -194,17 +251,16 @@ namespace TFGService
                 {
                     return 3;
                 }
-                
             }
 
             catch (Exception)
             {
                 return 0;
             }
-            finally
+            /*finally
             {
-                //if (hashIP.ContainsKey(ip)) hashIP[ip].Libre(true); // Se deja libre la IP por si se va a eliminar del HashIP.
-            }
+                if (hashIP.ContainsKey(ip)) hashIP[ip].Libre(true); // Se deja libre la IP por si se va a eliminar del HashIP.
+            }*/
 
         }
 
