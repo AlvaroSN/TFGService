@@ -9,24 +9,26 @@ namespace TFGService
 {
     public class InfoHash
     {
+        //Varibales importadas del servicio
         private int maxAccessTime = Service1.maxAccessTime;
         private int maxPeriodAccess = Service1.maxPeriodAccess;
-        private HashSet<String> sessionIDList;
-        private int numAccess;              //Número total de accesos
-        private int numFailAccess;          //Número total de accesos, después de se le haya denegado el acceso
-        private int numAccessURL;           //Número de accesos por URL
-        private int numAccessButton;        //Número de accesos por botón
-        private int numAccessList;          //Número de accesos por lista
-        private bool access;                //Variable para controlar el permiso de acceso
-        private bool accessDenied;          //Acceso denegado permanente
-        private bool accessAllowed;         //Acceso permito permanente
-        private bool accessURL;             //Control de acceso por URL
-        private bool accessList;            //COntrol de acceso por lista
-        private bool vpn;                   //Acceso denegado a VPNs
-        private DateTime firstAccess;       //Primer acceso
-        private DateTime lastAccess;        //Último acceso
-        private Queue<long> timeouts;       //Cola para chequear los accesos por tiempo
-        private Queue<long> periods;        //Cola para chequear los accesos periódicos
+
+        private HashSet<String> sessionIDList;  //Hashset para guardar los diferentes IDs de sesión
+        private int numAccess;                  //Número total de accesos
+        private int numFailAccess;              //Número total de accesos, después de se le haya denegado el acceso
+        private int numAccessURL;               //Número de accesos por URL
+        private int numAccessButton;            //Número de accesos por botón
+        private int numAccessList;              //Número de accesos por lista
+        private bool access;                    //Variable para controlar el permiso de acceso
+        private bool accessDenied;              //Acceso denegado permanente
+        private bool accessAllowed;             //Acceso permito permanente
+        private bool accessURL;                 //Control de acceso por URL
+        private bool accessList;                //COntrol de acceso por lista
+        private bool vpn;                       //Acceso denegado a VPNs
+        private DateTime firstAccess;           //Primer acceso
+        private DateTime lastAccess;            //Último acceso
+        private Queue<long> timeouts;           //Cola para chequear los accesos por tiempo
+        private Queue<long> periods;            //Cola para chequear los accesos periódicos
 
         public InfoHash()
         {
@@ -74,20 +76,7 @@ namespace TFGService
             lastAccess = DateTime.Now;  //Actualizar fecha del último acceso
         }
 
-        public void ResetAccesses()
-        {
-            firstAccess = DateTime.Now;
-            lastAccess = DateTime.Now;
-            numAccess = 0;
-            numFailAccess = 0;
-            numAccessButton = 0;
-            numAccessURL = 0;
-            numAccessList = 0;
-            timeouts.Clear();
-            periods.Clear();
-            sessionIDList.Clear();
-        }
-
+        //Gestión de la cola para controlar el máximo de accesos por tiempo
         public void SetTimeAtMaxAccess()
         {
             if (numAccess <= maxAccessTime)
@@ -102,6 +91,7 @@ namespace TFGService
             
         }
 
+        //Gestión de la cola para controlar los accesos periódicos
         public void SetPeriods()
         {
             if (numAccess <= maxPeriodAccess)
@@ -116,7 +106,7 @@ namespace TFGService
 
         }
 
-        //Cáculo de la desviación típica
+        //Cáculo de la desviación típica de una cola
         public double Deviation(Queue<long> list)
         {
             double standardDeviation = 0;
