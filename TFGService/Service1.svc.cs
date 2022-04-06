@@ -9,6 +9,7 @@ using System.IO;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Threading;
 
 namespace TFGService
 {
@@ -17,6 +18,7 @@ namespace TFGService
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     public class Service1 : IService1
     {
+        //Varibales declaradas en el archivo de confirguración:
         //Timer para controlar la creación de Reader
         private static System.Timers.Timer timer;
         //Variable para controlar el timer (nanosegundos)
@@ -28,24 +30,25 @@ namespace TFGService
         //Variables que indica el número máximo de veces (maxAccessTime) que puede acceder una dirección IP al servidor en un periodo de tiempo en segundos (maxTime)
         public static readonly int maxAccessTime = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxAccessTime"]);
         public static readonly int maxTime = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxTime"]);
-        //Variable que indica los segundos que tiene que estar una dirección sin acceder para que se restaure su número de consultas
-        
-        public static readonly long timeReset = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeReset"]);
+        //Variable que indica los segundos que tiene que estar una dirección sin acceder para que se borre del ipHash
         public static readonly long timeClean = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["timeClean"]);
+        //Variable que indica cuantas IPs pueden acceder con el servidor, que empiecen por los mismos 3 números, antes de que se borren del ipHash
         public static readonly long maxMultiIP = Convert.ToInt64(System.Configuration.ConfigurationManager.AppSettings["maxMultiIP"]);
-
+        //Variable para indicar que máximo de accesos periódicos que se van a permitir
         public static readonly int maxPeriodAccess = Convert.ToInt16(System.Configuration.ConfigurationManager.AppSettings["maxPeriodAccess"]);
 
         //Hash donde se van a almacenar los accesos al servidor
         private static ConcurrentDictionary<string, InfoHash> ipHash = new ConcurrentDictionary<string, InfoHash>();
-        private static ConcurrentDictionary<string, int> multiIPHash = new ConcurrentDictionary<string, int>();
-        //Instacia de la clase Reader, que se encarga de la lectura de los ficheros para actualizar las siguientes listas:
-        public static Reader reader;
-
+        //Hash donde se van a almacenar el principio de las direcciones que accedan al servidor, para gestionar la multiIP
+        //La clave son los 3 primeros números de la dirección IP, y el Hashset las ips que acceden y empiezan por la clave
+        private static ConcurrentDictionary<string, HashSet<String>> multiIPHash = new ConcurrentDictionary<string, HashSet<String>>();
         //Hashsets donde se van a guardar las listas de direcciones
         public static HashSet<String> whiteList;    //Listas de direcciones permitidas
         public static HashSet<String> blackList;    //Listas de direcciones que tiene prohibido el acceso al servidor
         public static HashSet<String> vpnList;      //Lista de direcciones que son VPNs, que tampoco tienen acceso
+
+        //Instacia de la clase Reader, que se encarga de la lectura de los ficheros para actualizar las siguientes listas:
+        public static Reader reader;
         //Fichero de escritura del log de accesos al servidor
         public static String registerFile = "C:\\inetpub\\ServicioIPControlWCF\\registro.txt";
 
@@ -95,8 +98,8 @@ namespace TFGService
             aux.Clear();
         }
 
-            //Función para checkear las listas
-            public void ControlList(String ip, InfoHash info)
+        //Función para checkear las listas
+        public void ControlList(String ip, InfoHash info)
         {
 
             //Escritura del registro de accesos en el log
@@ -139,13 +142,7 @@ namespace TFGService
             //Si un usuario sigue accediendo aunque no tenga permiso, se le añade a la lista negra
             if (info.NumFailAccess() >= 10)
             {
-                reader.AddIpToBlackList(access.IP, info);
-                return;
-            }
-
-            //Comprobar número máximo de accesos por tiempo
-            if (info.NumAccess() > 10 && info.Timeout() < maxTime * TimeSpan.TicksPerSecond)
-            {
+                //Añadir a la lista negra
                 reader.AddIpToBlackList(access.IP, info);
                 return;
             }
@@ -153,6 +150,7 @@ namespace TFGService
             //Comprobar que no se accede periódicamente, un máximo número de veces, usando la desviación típica
             if (info.NumAccess() > maxPeriodAccess && info.PeriodCheck() <= 1)
             {
+                //Añadir a la lista negra
                 reader.AddIpToBlackList(access.IP, info);
                 return;
             }
@@ -160,32 +158,47 @@ namespace TFGService
             //Comprobar si se está accediendo con muchas sesiones diferentes
             if (info.NumAccess() > 5 && info.NumAccess() - info.SessionIDs() < 2)
             {
+                //Añadir a la lista negra
                 reader.AddIpToBlackList(access.IP, info);
                 return;
             }
 
-            //Comprobar multiIPs
-            if (CheckMultiIP(access.IP, info))
+            //Comprobar número máximo de accesos por tiempo
+            if (info.NumAccess() > 10 && info.Timeout() < maxTime * TimeSpan.TicksPerSecond)
             {
-                reader.AddIpToBlackList(access.IP, info);
-                return;
+
+                //No permitir seguir accediendo (castigo)
+                info.Access(false);
+                reader.AddIpToPunishmentFile(access.IP);
             }
 
             //Comprobar si la ip supera el número máximo de intentos permitidos
             if (info.NumAccess() > maxAccess)
             {
+                //No permitir seguir accediendo (castigo)
                 info.Access(false);
+                reader.AddIpToPunishmentFile(access.IP);
+            }
+
+            //Comprobar multiIPs
+            if (CheckMultiIP(access.IP, info))
+            {
+                //No permitir seguir accediendo (castigo)
+                info.Access(false);
+                reader.AddIpToPunishmentFile(access.IP);
             }
 
             //Comprobar si el número de accesos por URL supera al máximo permitido
             if (info.NumAccessURL() > maxAccessURL)
             {
+                //No permitir acceder más por URL
                 info.AccessURL(false);
             }
 
             //Comprobar si el número de accesos por lista supera al máximo permitido
             if (info.NumAccessList() > maxAccessURL)
             {
+                //No permitir acceder más por lista
                 info.AccessList(false);
             }
 
@@ -194,32 +207,30 @@ namespace TFGService
 
         public bool CheckMultiIP(String ip, InfoHash info)
         {
-            if (info.NumAccessURL() > maxAccessURL / 2 && info.NumAccess() < 5)
+            /*if (info.NumAccessURL() > maxAccessURL / 2 && info.NumAccessButton() < 5)
             {
+                //Obtener 3 primeros números de la IP
                 String ipBeginning = ip.Substring(0, ip.LastIndexOf('.') - 1);
-                int num = multiIPHash.AddOrUpdate(ipBeginning, 1, (key, oldValue) => oldValue + 1);
+                //Añadir IP al multiIPHash, o sumar uno a su valor
+                int num = multiIPHash.AddOrUpdate(ipBeginning, new HashSet<String>, (key, oldValue) => oldValue.Add(ip));
+                //Si el número de IPs supera el límite, devolver true
                 if (num > maxMultiIP) return true;
-            }  
+            }*/  
             return false;
         }
 
         public void UpdateInfoHash(Access access, InfoHash info)
         {
-            //Tiempo de reseteo de los accesos
-            if (info.TimeFromLastAccess() >= timeReset * TimeSpan.TicksPerSecond)
-            {
-                info.ResetAccesses();
-            }
 
             //Siempre se prueba en que listas está la dirección IP
             ControlList(access.IP, info);
 
+            //Añadir el nuevo acceso al infoHash
+            info.AddAccess(access.Type, access.ID);
+
             //Si la dirección IP está en la lista negra no se hace nada más
-            if (!info.AccessDenied())
-            {
-                info.AddAccess(access.Type, access.ID);
-                CheckAccess(access, info);
-            }              
+            //Controlar un mínimo de accesos para hacer chequeos
+            if (!info.AccessDenied()) CheckAccess(access, info);            
         }
 
 
@@ -229,7 +240,11 @@ namespace TFGService
             //Si hay algún problema se le da acceso al cliente
             try
             {
-                lock (ipHash) info = ipHash.GetOrAdd(access.IP, new InfoHash());
+                lock (ipHash)
+                {
+                    info = ipHash.GetOrAdd(access.IP, new InfoHash());
+                    Thread.Sleep(10000); //Para comprobar si los locks están funcionando bien
+                }
 
                 //Se lanza un nuevo con la función encargada de controlar el acceso de la dirección IP
                 new Task(() => UpdateInfoHash(access, info)).Start();
@@ -257,10 +272,6 @@ namespace TFGService
             {
                 return 0;
             }
-            /*finally
-            {
-                if (hashIP.ContainsKey(ip)) hashIP[ip].Libre(true); // Se deja libre la IP por si se va a eliminar del HashIP.
-            }*/
 
         }
 

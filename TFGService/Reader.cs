@@ -16,6 +16,7 @@ namespace TFGService
         public static string blackListFile = "C:\\inetpub\\ServicioIPControlWCF\\listanegra.txt";
         public static string whiteListFile = "C:\\inetpub\\ServicioIPControlWCF\\listablanca.txt";
         public static string vpnListFile = "C:\\inetpub\\ServicioIPControlWCF\\VPN.txt";
+        public static string punishmentFile = "C:\\inetpub\\ServicioIPControlWCF\\castigo.txt";
         public Reader()
         {
             //LLamada a las funciones encargadas de leer los archivos e insertar las direcciones en los hashes
@@ -116,6 +117,21 @@ namespace TFGService
                 }
             }*/
             
+        }
+
+        public void AddIpToPunishmentFile(string ip)
+        {
+            StreamReader sr = new StreamReader(punishmentFile);
+            string content = sr.ReadToEnd();
+            sr.Close();
+            if (!content.Contains(ip))
+            {
+                //Corregir escritura concurrente
+                StreamWriter list = new StreamWriter(punishmentFile, true, System.Text.Encoding.Default);
+                list.WriteLine(ip);
+                list.Close();
+            }
+
         }
 
         //Getters
