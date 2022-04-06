@@ -93,9 +93,27 @@ namespace TFGService
             foreach (var ip in aux)
             {
                 lock (ipHash) ipHash.TryRemove(ip, out infoHash);
+                cleanMultiIpHash(ip);
             }
 
             aux.Clear();
+        }
+
+        public static void cleanMultiIpHash (string ip)
+        {
+            String ipBeginning = ip.Substring(0, ip.LastIndexOf('.') - 1);
+            if (multiIPHash.ContainsKey(ipBeginning))
+            {
+                HashSet<string> multiIps = multiIPHash.GetOrAdd(ipBeginning, new HashSet<string>());
+                if (multiIps.Contains(ip))
+                {
+                    multiIps.Remove(ip);
+                    if(multiIps.Count == 0)
+                    {
+                        lock (multiIPHash) multiIPHash.TryRemove(ipBeginning, out multiIps);
+                    }
+                }
+            }
         }
 
         //Función para checkear las listas
@@ -147,7 +165,7 @@ namespace TFGService
                 return;
             }
 
-            //Comprobar que no se accede periódicamente, un máximo número de veces, usando la desviación típica
+            //Comprobar que no se accede periódicamente un máximo número de veces, usando la desviación típica
             if (info.NumAccess() > maxPeriodAccess && info.PeriodCheck() <= 1)
             {
                 //Añadir a la lista negra
@@ -163,18 +181,18 @@ namespace TFGService
                 return;
             }
 
-            //Comprobar número máximo de accesos por tiempo
-            if (info.NumAccess() > 10 && info.Timeout() < maxTime * TimeSpan.TicksPerSecond)
+            //Comprobar si la ip supera el número máximo de intentos permitidos
+            if (info.NumAccess() > maxAccess)
             {
-
                 //No permitir seguir accediendo (castigo)
                 info.Access(false);
                 reader.AddIpToPunishmentFile(access.IP);
             }
 
-            //Comprobar si la ip supera el número máximo de intentos permitidos
-            if (info.NumAccess() > maxAccess)
+            //Comprobar número máximo de accesos por tiempo
+            if (info.NumAccess() > 10 && info.Timeout() < maxTime * TimeSpan.TicksPerSecond)
             {
+
                 //No permitir seguir accediendo (castigo)
                 info.Access(false);
                 reader.AddIpToPunishmentFile(access.IP);
@@ -207,15 +225,17 @@ namespace TFGService
 
         public bool CheckMultiIP(String ip, InfoHash info)
         {
-            /*if (info.NumAccessURL() > maxAccessURL / 2 && info.NumAccessButton() < 5)
+            if (info.NumAccessURL() > maxAccessURL / 2 && info.NumAccessButton() < 5)
             {
+                HashSet<String> multiIps;
                 //Obtener 3 primeros números de la IP
                 String ipBeginning = ip.Substring(0, ip.LastIndexOf('.') - 1);
-                //Añadir IP al multiIPHash, o sumar uno a su valor
-                int num = multiIPHash.AddOrUpdate(ipBeginning, new HashSet<String>, (key, oldValue) => oldValue.Add(ip));
+                //Se obtiene el hash de ips que han accedido y empiezan por ipBeginning
+                lock (multiIPHash) multiIps = multiIPHash.GetOrAdd(ipBeginning, new HashSet<String>());
+                if (!multiIps.Contains(ip)) multiIps.Add(ip); 
                 //Si el número de IPs supera el límite, devolver true
-                if (num > maxMultiIP) return true;
-            }*/  
+                if (multiIps.Count > maxMultiIP) return true;
+            }  
             return false;
         }
 
@@ -240,11 +260,12 @@ namespace TFGService
             //Si hay algún problema se le da acceso al cliente
             try
             {
-                lock (ipHash)
+                /*lock (ipHash)
                 {
                     info = ipHash.GetOrAdd(access.IP, new InfoHash());
                     Thread.Sleep(10000); //Para comprobar si los locks están funcionando bien
-                }
+                }*/
+                lock (ipHash) info = ipHash.GetOrAdd(access.IP, new InfoHash());
 
                 //Se lanza un nuevo con la función encargada de controlar el acceso de la dirección IP
                 new Task(() => UpdateInfoHash(access, info)).Start();
